@@ -36,6 +36,11 @@ lazy val rules = project
 
 lazy val input = project.settings(skip in publish := true)
 
+lazy val inputUnusedImports = project.settings(
+  skip in publish := true,
+  scalacOptions ++= List("-Ywarn-unused-import")
+)
+
 lazy val output = project.settings(skip in publish := true)
 
 lazy val tests = project
@@ -49,8 +54,18 @@ lazy val tests = project
       "org.scala-lang.modules" %% "scala-xml" % "1.2.0",
       "org.slf4j" % "slf4j-api" % "1.7.25"
     ),
-    (compile in Compile) := ((compile in Compile) dependsOn (compile in (input, Compile))).value,
-    scalafixTestkitOutputSourceDirectories := (sourceDirectories in (output, Compile)).value,
-    scalafixTestkitInputSourceDirectories := (sourceDirectories in (input, Compile)).value,
-    scalafixTestkitInputClasspath := (fullClasspath in (input, Compile)).value
+    compile.in(Compile) := compile
+      .in(Compile)
+      .dependsOn(
+        compile.in(input, Compile),
+        compile.in(inputUnusedImports, Compile)
+      )
+      .value,
+    scalafixTestkitOutputSourceDirectories := sourceDirectories.in(output, Compile).value,
+    scalafixTestkitInputSourceDirectories :=
+      (sourceDirectories.in(input, Compile).value ++
+        sourceDirectories.in(inputUnusedImports, Compile).value),
+    scalafixTestkitInputClasspath :=
+      (fullClasspath.in(input, Compile).value ++
+        fullClasspath.in(inputUnusedImports, Compile).value).distinct
   )
